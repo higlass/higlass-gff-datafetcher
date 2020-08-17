@@ -1,24 +1,27 @@
 {
-  "name": "higlass-multivec",
-  "version": "0.2.6",
-  "description": "Multivec Tracks for HiGlass",
+  "name": "higlass-gff-datafetcher",
+  "version": "0.1.0",
+  "description": "GFF Data Fetcher for HiGlass",
   "private": false,
-  "author": "Danielle Nguyen",
+  "author": "Zymergen, Inc.",
   "license": "MIT",
   "contributors": [
     {
-      "name": "Danielle Nguyen",
-      "url": "http://github.com/daniellenguyen"
+      "name": "Peter Kerpedjiev",
+      "url": "http://github.com/pkerpedjiev"
     }
   ],
   "main": "./src/index.js",
-  "unpkg": "./dist/higlass-multivec.min.js",
+  "unpkg": "./dist/higlass-gff-datafetcher.min.js",
   "module": "./es",
   "files": [
     "dist",
     "es"
   ],
-  "repository": "github:higlass/higlass-multivec",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/higlass/higlass-gff-datafetcher.git"
+  },
   "devDependencies": {
     "autoprefixer": "^8.6.5",
     "babel-core": "^6.26.3",
