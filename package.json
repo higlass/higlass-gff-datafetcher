@@ -1,6 +1,6 @@
 {
   "name": "higlass-gff-datafetcher",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "GFF Data Fetcher for HiGlass",
   "private": false,
   "author": "Zymergen, Inc.",
