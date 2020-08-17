@@ -74,20 +74,47 @@ function collapse(segments, scale) {
   return collapsed;
 }
 
+const chrToAbs = (chrom, chromPos, chromInfo) =>
+  chromInfo.chrPositions[chrom].pos + chromPos;
+
+function parseChromsizesRows(data) {
+  const cumValues = [];
+  const chromLengths = {};
+  const chrPositions = {};
+
+  let totalLength = 0;
+
+  for (let i = 0; i < data.length; i++) {
+    const length = Number(data[i][1]);
+    totalLength += length;
+
+    const newValue = {
+      id: i,
+      chr: data[i][0],
+      pos: totalLength - length,
+    };
+
+    cumValues.push(newValue);
+    chrPositions[newValue.chr] = newValue;
+    chromLengths[data[i][0]] = length;
+  }
+
+  return {
+    chrToAbs: ([chrName, chrPos]) =>
+      chrToAbs(chrName, chrPos, { chrPositions }),
+    cumPositions: cumValues,
+    chrPositions,
+    totalLength,
+    chromLengths,
+  };
+}
+
 const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
   if (!new.target) {
     throw new Error(
       'Uncaught TypeError: Class constructor cannot be invoked without "new"'
     );
   }
-
-  const {
-    chrToAbs,
-    DenseDataExtrema1D,
-    minNonZero,
-    maxNonZero,
-    parseChromsizesRows,
-  } = HGC.utils;
 
   function gffObjToChromsizes(gffObj) {
     const annotations = gffObj
