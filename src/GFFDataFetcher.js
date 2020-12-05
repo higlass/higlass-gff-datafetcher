@@ -252,9 +252,15 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
     }
 
     createGenesAndChroms() {
-      this.genes = this.gffObj
-        .filter((x) => x[0].type === "gene")
-        .map((x) => x[0]);
+      const excludeTypes = this.dataConfig.options && this.dataConfig.options.excludeTypes;
+
+      let items = this.gffObj.map(x => x[0]);
+
+      if (excludeTypes) {
+        items = items.filter(x => !excludeTypes.includes(x.type))
+      }
+
+      this.genes = items;
 
       if (!this.chromSizes) {
         this.chromSizes = gffObjToChromsizes(this.gffObj);

@@ -43,6 +43,11 @@ Note that the `chromSizesUrl` option is optional and only needs to be provided i
 
 For an example, see [`src/index.html`](src/index.html).
 
+### Options
+
+**namePaths** - A list (e.g. `['gene', 'annotationName']`) of attributes to look in when choosing the name of the region to display. The fetcher will go through the items in this option and use the first one that is present in the attributes.
+**excludeTypes** - A list of types to exclude from the display.
+
 ## Development
 
 ### Testing
