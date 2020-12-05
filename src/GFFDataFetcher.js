@@ -238,7 +238,7 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
           console.error("err:", err);
         }
       } else if (dataConfig.text) {
-        await Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
           this.gffObj = gff.parseStringSync(dataConfig.text);
 
           this.createGenesAndChroms();
