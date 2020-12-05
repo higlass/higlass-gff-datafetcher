@@ -27,6 +27,7 @@ Configure the track in your view config; you should be all set from here!
     "data": {
       "type": "gff",
       "url": "https://pkerp.s3.amazonaws.com/public/GCF_001461035.1_ASM146103v1_genomic.gff.gz",
+      "chromSizesUrl": "https://domain.com/my.chrom.sizes",
       "options": {
         "namePaths": [
           "gene",
@@ -37,6 +38,8 @@ Configure the track in your view config; you should be all set from here!
   }
 ]
 ```
+
+Note that the `chromSizesUrl` option is optional and only needs to be provided if the gff file lacks the `region` entries listing the chromosomes in the assembly.
 
 For an example, see [`src/index.html`](src/index.html).
 

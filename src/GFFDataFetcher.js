@@ -2,6 +2,8 @@ import slugid from "slugid";
 import pako from "pako";
 import gff from "@gmod/gff";
 import jp from "jsonpath";
+import { tsvParseRows } from 'd3-dsv';
+import { text } from 'd3-request';
 
 /**
  * Shuffles array in place.
@@ -74,8 +76,9 @@ function collapse(segments, scale) {
   return collapsed;
 }
 
-const chrToAbs = (chrom, chromPos, chromInfo) =>
-  chromInfo.chrPositions[chrom].pos + chromPos;
+const chrToAbs = (chrom, chromPos, chromInfo) =>{
+  return chromInfo.chrPositions[chrom].pos + chromPos;
+}
 
 function parseChromsizesRows(data) {
   const cumValues = [];
@@ -109,6 +112,30 @@ function parseChromsizesRows(data) {
   };
 }
 
+function ChromosomeInfo(filepath, success) {
+  const ret = {};
+
+  ret.absToChr = (absPos) => (ret.chrPositions ? absToChr(absPos, ret) : null);
+
+  ret.chrToAbs = ([chrName, chrPos] = []) =>
+    ret.chrPositions ? chrToAbs(chrName, chrPos, ret) : null;
+
+  return text(filepath, (error, chrInfoText) => {
+    if (error) {
+      // console.warn('Chromosome info not found at:', filepath);
+      if (success) success(null);
+    } else {
+      const data = tsvParseRows(chrInfoText);
+      const chromInfo = parseChromsizesRows(data);
+
+      Object.keys(chromInfo).forEach((key) => {
+        ret[key] = chromInfo[key];
+      });
+      if (success) success(ret);
+    }
+  });
+}
+
 const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
   if (!new.target) {
     throw new Error(
@@ -125,7 +152,7 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
       annotations.map((x) => [x.seq_id, x.end])
     );
 
-    chromSizes.chrToAbs = (chrom, pos) => chrToAbs(chrom, pos, chromSizes);
+    chromSizes.chrToAbs = ([chrom, pos]) => chrToAbs(chrom, pos, chromSizes);
     return chromSizes;
   }
 
@@ -141,10 +168,9 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
         if (queryName) break;
       }
     }
-
     return {
-      xStart: chromSizes.chrToAbs(gb.seq_id, gb.start),
-      xEnd: chromSizes.chrToAbs(gb.seq_id, gb.end),
+      xStart: chromSizes.chrToAbs([gb.seq_id, gb.start]),
+      xEnd: chromSizes.chrToAbs([gb.seq_id, gb.end]),
       strand: gb.strand,
       chrOffset: chromSizes.chrPositions[gb.seq_id].pos,
       importance: gb.end - gb.start,
@@ -175,33 +201,44 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
       this.trackUid = slugid.nice();
 
       this.errorTxt = "";
+      this.dataPromise = this.loadGff(dataConfig);
+    }
+
+    async loadGff(dataConfig) {
+      if (dataConfig.chromSizesUrl) {
+        await new Promise((resolve) => {
+          ChromosomeInfo(dataConfig.chromSizesUrl, (chromInfo) => {
+            this.chromSizes = chromInfo;
+            resolve();
+          });
+        });
+      }
 
       if (dataConfig.url) {
         const extension = dataConfig.url.slice(dataConfig.url.length - 3);
         const gzipped = extension === ".gz";
 
-        this.dataPromise = fetch(dataConfig.url, {
+        try {
+
+        const response = await fetch(dataConfig.url, {
           mode: "cors",
           redirect: "follow",
           method: "GET",
-        })
-          .then((response) =>
-            gzipped ? response.arrayBuffer() : response.text()
-          )
-          .then((buffer) => {
-            const gffText = gzipped
-              ? pako.inflate(buffer, { to: "string" })
-              : buffer;
-            // store all the GFF file annotations
-            this.gffObj = gff.parseStringSync(gffText);
+        });
 
-            this.createGenesAndChroms();
-          })
-          .catch((err) => {
-            console.error("err:", err);
-          });
+        const buffer = gzipped ? await response.arrayBuffer()  : await response.text();
+        const gffText = gzipped
+          ? pako.inflate(buffer, { to: "string" })
+          : buffer;
+        // store all the GFF file annotations
+        this.gffObj = gff.parseStringSync(gffText);
+
+        this.createGenesAndChroms();
+        } catch (err)  {
+          console.error("err:", err);
+        }
       } else if (dataConfig.text) {
-        this.dataPromise = new Promise((resolve, reject) => {
+        await Promise((resolve, reject) => {
           this.gffObj = gff.parseStringSync(dataConfig.text);
 
           this.createGenesAndChroms();
@@ -219,7 +256,10 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
         .filter((x) => x[0].type === "gene")
         .map((x) => x[0]);
 
-      this.chromSizes = gffObjToChromsizes(this.gffObj);
+      if (!this.chromSizes) {
+        this.chromSizes = gffObjToChromsizes(this.gffObj);
+      }
+
       this.hgGenes = this.genes.map((x) =>
         gffToHgGene(
           x,
