@@ -2,8 +2,8 @@ import slugid from "slugid";
 import pako from "pako";
 import gff from "@gmod/gff";
 import jp from "jsonpath";
-import { tsvParseRows } from 'd3-dsv';
-import { text } from 'd3-request';
+import { tsvParseRows } from "d3-dsv";
+import { text } from "d3-request";
 
 /**
  * Shuffles array in place.
@@ -76,9 +76,9 @@ function collapse(segments, scale) {
   return collapsed;
 }
 
-const chrToAbs = (chrom, chromPos, chromInfo) =>{
+const chrToAbs = (chrom, chromPos, chromInfo) => {
   return chromInfo.chrPositions[chrom].pos + chromPos;
-}
+};
 
 function parseChromsizesRows(data) {
   const cumValues = [];
@@ -219,22 +219,23 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
         const gzipped = extension === ".gz";
 
         try {
+          const response = await fetch(dataConfig.url, {
+            mode: "cors",
+            redirect: "follow",
+            method: "GET",
+          });
 
-        const response = await fetch(dataConfig.url, {
-          mode: "cors",
-          redirect: "follow",
-          method: "GET",
-        });
+          const buffer = gzipped
+            ? await response.arrayBuffer()
+            : await response.text();
+          const gffText = gzipped
+            ? pako.inflate(buffer, { to: "string" })
+            : buffer;
+          // store all the GFF file annotations
+          this.gffObj = gff.parseStringSync(gffText);
 
-        const buffer = gzipped ? await response.arrayBuffer()  : await response.text();
-        const gffText = gzipped
-          ? pako.inflate(buffer, { to: "string" })
-          : buffer;
-        // store all the GFF file annotations
-        this.gffObj = gff.parseStringSync(gffText);
-
-        this.createGenesAndChroms();
-        } catch (err)  {
+          this.createGenesAndChroms();
+        } catch (err) {
           console.error("err:", err);
         }
       } else if (dataConfig.text) {
@@ -252,12 +253,13 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
     }
 
     createGenesAndChroms() {
-      const excludeTypes = this.dataConfig.options && this.dataConfig.options.excludeTypes;
+      const excludeTypes =
+        this.dataConfig.options && this.dataConfig.options.excludeTypes;
 
-      let items = this.gffObj.map(x => x[0]);
+      let items = this.gffObj.map((x) => x[0]);
 
       if (excludeTypes) {
-        items = items.filter(x => !excludeTypes.includes(x.type))
+        items = items.filter((x) => !excludeTypes.includes(x.type));
       }
 
       this.genes = items;
@@ -266,13 +268,17 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
         this.chromSizes = gffObjToChromsizes(this.gffObj);
       }
 
-      this.hgGenes = this.genes.map((x) =>
-        gffToHgGene(
-          x,
-          this.dataConfig.options && this.dataConfig.options.namePaths,
-          this.chromSizes
-        )
-      );
+      this.hgGenes = this.genes
+        .filter((x) => x.type !== "region")
+        .map((x) =>
+          gffToHgGene(
+            x,
+            this.dataConfig.options && this.dataConfig.options.namePaths,
+            this.chromSizes
+          )
+        );
+
+      this.hgGenes.sort((a, b) => a.start - b.start);
     }
 
     tilesetInfo(callback) {
