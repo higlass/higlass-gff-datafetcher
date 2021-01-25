@@ -278,7 +278,8 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
           )
         );
 
-      this.hgGenes.sort((a, b) => a.start - b.start);
+      this.hgGenes.sort((a, b) => a.xStart - b.xStart);
+      this.shuffledHgGenes = shuffle([...this.hgGenes]);
     }
 
     tilesetInfo(callback) {
@@ -369,11 +370,15 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
         const filtered = this.hgGenes.filter(
           (v) => v.xEnd > minX && v.xStart < maxX
         );
+        const shuffledFiltered = this.shuffledHgGenes.filter(
+          (v) => v.xEnd > minX && v.xStart < maxX
+        );
 
         const collapsedPlus = collapse(
           filtered.filter((v) => v.strand === "+"),
           scaleFactor
         );
+
         const collapsedMinus = collapse(
           filtered.filter((v) => v.strand !== "+"),
           scaleFactor
@@ -385,8 +390,6 @@ const GFFDataFetcher = function GFFDataFetcher(HGC, ...args) {
         collapsedMinus.forEach((v) => {
           v.strand = "-";
         });
-
-        const shuffledFiltered = shuffle(filtered);
 
         let values = [];
         const TILE_CAPACITY = 20;
